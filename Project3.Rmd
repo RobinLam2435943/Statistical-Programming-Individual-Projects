@@ -1,0 +1,69 @@
+---
+title: "Project 3"
+author: "Robin Lin"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pspline <- function(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 100){
+  
+  dk <- diff(range(x)) / (k - bord) # knot spacing
+  knots <- seq(min(x) - dk * bord, by = dk, length = k + bord + 1)
+  X <- splines::splineDesign(knots, x, ord = bord + 1, outer.ok = TRUE)
+  D <- diff(diag(k), differences = pord)
+  
+  qrX <- qr(X)
+  Q <- qr.Q(qrX)
+  R <- qr.R(qrX)
+  
+  eig <- eigen(t(solve(R)) %*% t(D) %*% D %*% solve(R))
+  U <- eig$vectors
+  Lam <- diag(eig$values)
+  
+  logSP <- seq(from = logsp[1], to = logsp[2], length.out = ngrid)
+  SP <- exp(logSP)
+  
+  gcv <- function(lambda){
+    
+    revised_Lam <- diag(diag(1 + lambda * Lam))
+    coef <- solve(R) %*% (U %*% (solve(revised_Lam) %*% (t(U) %*% (t(Q) %*% y))))
+    fitted <- X %*% coef
+    edf <- sum(diag(solve(revised_Lam)))
+    sig2 <- sum((y - fitted) ^ 2) / (nrow(X) - edf)
+    gcv <- sig2 / (nrow(X) - edf)
+    return(gcv)
+  }
+  
+  GCV <- rep(0, ngrid)
+  for (i in 1 : ngrid){
+    GCV[i] <- gcv(SP[i])
+  }
+  sp <- SP[which(GCV == min(GCV))]
+
+  revised_Lam <- diag(diag(1 + sp * Lam))
+  coef <- solve(R) %*% (U %*% (solve(revised_Lam) %*% (t(U) %*% (t(Q) %*% y))))
+  fitted <- X %*% coef
+  edf <- sum(diag(solve(revised_Lam)))
+  sig2 <- sum((y - fitted) ^ 2) / (nrow(X) - edf)
+  r2 <- 1 - (nrow(X) - 1) * sig2 / sum((y - mean(y)) ^ 2)
+  gcv <- sig2 / (nrow(X) - edf)
+  
+  newlist <- list('B-spline_Order' = bord, 'Penalty_Order_of_Difference' = pord, 'Number_of_Basis_Functions' = k, 'Knots' = knots, 'Lambda' = sp, 'Coefficients' = coef, 'Fitted_Values' = fitted, 'Effective_Degrees_of_Freedom' = edf, 'Residual_Variance' = sig2, 'Residual_Std' = sqrt(sig2), 'R_Squared' = r2, 'Generalised_Cross_Validation' = gcv)
+  
+  return(newlist)
+}
+```
+
+```{r}
+# debug(pspline)
+library(MASS)
+x <- mcycle$times
+y <- mcycle$accel
+pspline(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 100)
+# undebug(pspline)
+```
