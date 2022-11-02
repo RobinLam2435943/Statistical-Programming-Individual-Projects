@@ -10,60 +10,129 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+## Code to smooth with basis expansions and penalties.
+
+## The y values consist of a smoothing function of x, as well as the error terms.
+
+## The smoothing function is a linear combination of k evenly-spaced B-splined
+## basis functions, and the coefficients are to be estimated.
+
+## In order to avoid over-fitting, some smoothing penalty is imposed, making each 
+## coefficient to vary smoothly from its neighbouring ones.
+
+## The model is hence estimated by penalised least squares, and the smoothing
+## parameter is chosen in order to minimise the generalised cross validation
+## (GCV) criterion.
+
+## This project aims at fitting P-splines to the x, y data, and selecting
+## the smoothing parameter based on GCV criterion. Also, some details of the 
+## method function are needed to print out. Predictions are to be made, and 
+## some plots are to be sketched.
+```
+
+```{r}
 pspline <- function(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 100){
   
-  dk <- diff(range(x)) / (k - bord) # knot spacing
-  knots <- seq(min(x) - dk * bord, by = dk, length = k + bord + 1)
-  X <- splines::splineDesign(knots, x, ord = bord + 1, outer.ok = TRUE)
-  D <- diff(diag(k), differences = pord)
+  ## This function aims at performing the best fit to the smoothing function, and
+  ## print out the details of the model.
   
-  qrX <- qr(X)
-  Q <- qr.Q(qrX)
-  R <- qr.R(qrX)
+  ## x, y are data points, and k is the number of evenly-spaced B-splined basis 
+  ## functions. 'logsp' represents the boundaries of smoothing functions in log
+  ## scale. 'bord' is the B-spline order, and 'pord' is the penalty order of 
+  ## difference. 'ngrid' is the number of smoothing parameters to try.
   
-  eig <- eigen(t(solve(R)) %*% t(D) %*% D %*% solve(R))
-  U <- eig$vectors
-  Lam <- diag(eig$values)
+  dk <- diff(range(x)) / (k - bord) # Knot spacing.
+  knots <- seq(min(x) - dk * bord, by = dk, length = k + bord + 1) # Knots 
+  # generating.
+  X <- splines::splineDesign(knots, x, ord = bord + 1, outer.ok = TRUE) # Data 
+  # matrix.
+  D <- diff(diag(k), differences = pord) # Penalisation matrix.
   
-  logSP <- seq(from = logsp[1], to = logsp[2], length.out = ngrid)
-  SP <- exp(logSP)
+  qrX <- qr(X) # Obtains QR-factorisation of X, i.e., X = QR.
+  Q <- qr.Q(qrX) # Matrix Q.
+  R <- qr.R(qrX) # Matrix R.
+  
+  eig <- eigen(t(solve(R)) %*% t(D) %*% D %*% solve(R)) # Obtains eigen-
+  # decomposition of (D * R ^ (-1)) ^ T * (D * R ^ (-1)), i.e.,
+  # (D * R ^ (-1)) ^ T * (D * R ^ (-1)) = U * \Lambda * (U ^ T).
+  U <- eig$vectors # Matrix U.
+  Lam <- diag(eig$values) # Matrix \Lambda.
+  
+  logSP <- seq(from = logsp[1], to = logsp[2], length.out = ngrid) # Equally 
+  # separated smoothing parameters in log scale.
+  SP <- exp(logSP) # Smoothing parameters.
   
   gcv <- function(lambda){
     
-    revised_Lam <- diag(diag(1 + lambda * Lam))
+    ## This function aims at reckoning GCV criterion given a smoothing parameter.
+    
+    revised_Lam <- diag(diag(1 + lambda * Lam)) # Matrix (I + smoothing_par * 
+    # \Lambda).
     coef <- solve(R) %*% (U %*% (solve(revised_Lam) %*% (t(U) %*% (t(Q) %*% y))))
-    fitted <- X %*% coef
-    edf <- sum(diag(solve(revised_Lam)))
-    sig2 <- sum((y - fitted) ^ 2) / (nrow(X) - edf)
-    gcv <- sig2 / (nrow(X) - edf)
+    # Estimates of coefficients.
+    
+    fitted <- X %*% coef # Fitted Values.
+    edf <- sum(diag(solve(revised_Lam))) # Effective degrees of freedom, taking 
+    # the trace on the inverse of 'revised_Lam'.
+    sig2 <- sum((y - fitted) ^ 2) / (nrow(X) - edf) # Residual Variance.
+    gcv <- sig2 / (nrow(X) - edf) # GCV criterion.
     return(gcv)
   }
   
-  GCV <- rep(0, ngrid)
-  for (i in 1 : ngrid){
-    GCV[i] <- gcv(SP[i])
+  GCV <- rep(0, ngrid) # Creates a zero-vector.
+  for (i in 1 : ngrid){ # Loops through all numbers of smoothing parameters. 
+    GCV[i] <- gcv(SP[i]) # Fills in values of GCV.
   }
-  sp <- SP[which(GCV == min(GCV))]
+  sp <- SP[which(GCV == min(GCV))] # Selects the smoothing parameter with the 
+  # smallest GCV criterion.
 
-  revised_Lam <- diag(diag(1 + sp * Lam))
+  revised_Lam <- diag(diag(1 + sp * Lam)) # Matrix (I + smoothing_par * 
+  # \Lambda).
   coef <- solve(R) %*% (U %*% (solve(revised_Lam) %*% (t(U) %*% (t(Q) %*% y))))
-  fitted <- X %*% coef
-  edf <- sum(diag(solve(revised_Lam)))
-  sig2 <- sum((y - fitted) ^ 2) / (nrow(X) - edf)
-  r2 <- 1 - (nrow(X) - 1) * sig2 / sum((y - mean(y)) ^ 2)
-  gcv <- sig2 / (nrow(X) - edf)
+  # Estimates of coefficients.
   
-  newlist <- list('B-spline_Order' = bord, 'Penalty_Order_of_Difference' = pord, 'Number_of_Basis_Functions' = k, 'Knots' = knots, 'Lambda' = sp, 'Coefficients' = coef, 'Fitted_Values' = fitted, 'Effective_Degrees_of_Freedom' = edf, 'Residual_Variance' = sig2, 'Residual_Std' = sqrt(sig2), 'R_Squared' = r2, 'Generalised_Cross_Validation' = gcv)
+  fitted <- X %*% coef # Fitted Values.
+  edf <- sum(diag(solve(revised_Lam))) # Effective degrees of freedom, taking 
+  # the trace on the inverse of 'revised_Lam'.
+  sig2 <- sum((y - fitted) ^ 2) / (nrow(X) - edf) # Residual Variance.
+  r2 <- 1 - (nrow(X) - 1) * sig2 / sum((y - mean(y)) ^ 2) # Model R-squared.
+  gcv <- sig2 / (nrow(X) - edf) # GCV criterion.
+  
+  newlist <- list('B_spline_Order' = bord, 'Penalty_Order_of_Difference' = pord, 'Number_of_Basis_Functions' = k, 'Knots' = knots, 'Lambda' = sp, 'Coefficients' = coef, 'Fitted_Values' = fitted, 'Effective_Degrees_of_Freedom' = edf, 'Residual_Variance' = sig2, 'Residual_Std' = sqrt(sig2), 'R_Squared' = r2, 'Generalised_Cross_Validation' = gcv) # Creates a list containing a bunch of 
+  # details of the model.
   
   return(newlist)
 }
 ```
 
 ```{r}
-# debug(pspline)
+print.pspline <- function(m){
+  
+  ## This function aims at showing the EDF, k, residual std, r ^ 2, and GCV of the
+  ## model, given the method function 'pspline'.
+  
+  cat('Order', m$B_spline_Order, 'p-spline with order', m$Penalty_Order_of_Difference, 'penalty', '\n')
+  
+  cat('Effective degrees of freedom:', m$Effective_Degrees_of_Freedom, 'Coefficients:', m$Number_of_Basis_Functions, '\n')
+  
+  cat('residual std dev:', m$Residual_Std, 'r-squared:', m$R_Squared, 'GCV:', m$Generalised_Cross_Validation, '\n')
+  
+  newlist <- list('gcv' = m$Generalised_Cross_Validation, 'edf' = m$Effective_Degrees_of_Freedom, 'r2' = m$R_Squared) # Stores the values of gcv,
+  # edf, and r2.
+  
+  invisible(newlist) # Silently returns the new list.
+}
+```
+
+```{r}
+## Load the data set.
 library(MASS)
 x <- mcycle$times
 y <- mcycle$accel
-pspline(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 100)
-# undebug(pspline)
+
+## Apply the 'pspline' function.
+m <- pspline(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 100)
+
+## Show the results.
+print.pspline(m)
 ```
