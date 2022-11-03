@@ -1,15 +1,3 @@
----
-title: "Project 3"
-author: "Robin Lin"
-date: "`r Sys.Date()`"
-output: word_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
 ## The author of this project is Sihong Lin, which can also be referred to as 
 ## Robin Lin.
 
@@ -22,9 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## https://github.com/RobinLam2435943/Statistical-Programming-Individual-Projects.git
 
 ## -----------------------------------------------------------------------------
-```
 
-```{r}
 ## Code to smooth with basis expansions and penalties.
 
 ## The y values consist of a smoothing function of x, as well as the error terms.
@@ -43,9 +29,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ## the optimal smoothing parameter based on GCV criterion. Also, some details of 
 ## the output of the method function are needed. Predictions are to be made, 
 ## and some diagnostic plots are to be sketched.
-```
 
-```{r}
+
 pspline <- function(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 100){
   
   ## This function aims at performing the best fit to the smoothing function. The
@@ -98,7 +83,7 @@ pspline <- function(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 
   GCV <- as.numeric(lapply(X = SP, FUN = gcv)) # Stores all the GCV values.
   sp <- SP[which.min(GCV)] # Selects the smoothing parameter with the 
   # smallest GCV criterion.
-
+  
   revised_Lam <- diag(diag(1 + sp * Lam)) # Matrix (I + smoothing_par * 
   # \Lambda).
   A <- solve(R) %*% U %*% solve(revised_Lam) %*% t(U) # Matrix (R ^ (-1) * U * 
@@ -118,9 +103,8 @@ pspline <- function(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 
   
   return(newlist)
 }
-```
 
-```{r}
+
 print.pspline <- function(m){
   
   ## This function aims at showing the EDF, k, residual std, r ^ 2, and GCV of 
@@ -134,12 +118,11 @@ print.pspline <- function(m){
   
   newlist <- list('gcv' = m$Generalised_Cross_Validation, 'edf' = m$Effective_Degrees_of_Freedom, 'r2' = m$R_Squared)   
   # Stores the values of gcv, edf, and r2.
-
+  
   invisible(newlist) # Silently returns the new list.
 }
-```
 
-```{r}
+
 predict.pspline <- function(m, x, se = TRUE){
   
   ## This function aims at making predictions from the model given new x values
@@ -163,11 +146,10 @@ predict.pspline <- function(m, x, se = TRUE){
   
   return(newlist)
 }
-```
 
-```{r}
+
 plot.pspline <- function(m){
-
+  
   ## This function aims at sketching 3 diagnostic plots of the model.
   
   ## The first one is the plot of the original data set, with the smoothing
@@ -216,25 +198,3 @@ plot.pspline <- function(m){
   # the upper limits, as well as the corresponding x values to the new list.
   invisible(newlist) # Silently returns the new list.
 }
-```
-
-```{r}
-## Load the data set.
-library(MASS)
-x <- mcycle$times
-y <- mcycle$accel
-
-## Apply the 'pspline' function.
-m <- pspline(x, y)
-
-## Print EDF, k, residual std, r ^ 2, and GCV of the model.
-print.pspline(m)
-
-## Make predictions.
-new_x<- x[1 : 10]
-predict.pspline(m, new_x)
-
-## Sketch the diagnostic plots.
-plot.pspline(m)
-```
-
