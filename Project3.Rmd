@@ -80,10 +80,7 @@ pspline <- function(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 
     return(gcv)
   }
   
-  GCV <- rep(0, ngrid) # Creates a zero-vector.
-  for(i in 1 : ngrid){ # Loops through all numbers of smoothing parameters. 
-    GCV[i] <- gcv(SP[i]) # Fills in values of GCV.
-  }
+  GCV <- as.numeric(lapply(X = SP, FUN = gcv)) # Stores all the GCV values.
   sp <- SP[which(GCV == min(GCV))] # Selects the smoothing parameter with the 
   # smallest GCV criterion.
 
@@ -156,22 +153,38 @@ predict.pspline <- function(m, x, se = TRUE){
 ```{r}
 plot.pspline <- function(m){
 
-
+  ## This function 
   
-  CL <- .95 # Credible Level
-  CV <- qnorm((1 - CL) / 2, lower.tail = FALSE) # Critical Value
+  CL <- .95 # Credible Level.
+  CV <- qnorm((1 - CL) / 2, lower.tail = FALSE) # Critical Value.
   ll <- m$Fitted - CV * predict.pspline(m, m$x)$se # Lower Confidence Limit.
   ul <- m$Fitted + CV * predict.pspline(m, m$x)$se # Upper Confidence Limit.
   
-  plot(m$y ~ m$x, main = 'Smoothing Plot with 95% Credible Intervals', xlab = 'x', ylab = 'y', type = 'p')
-  lines(m$Fitted ~ m$x, col = 'red', lwd = 3)
-  lines(ll ~ m$x, col = 'blue', lwd = 3)
-  lines(ul ~ m$x, col = 'blue', lwd = 3)
-  legend('bottomright', legend = c('Smoothing Curve', '95% Credible Interval Bounds'), lwd = 3, col = c('red', 'blue'), cex = .7)
+  ## The First Plot 
   
+  plot(m$y ~ m$x, main = 'Smoothing Plot with 95% Credible Intervals', xlab = 'x', ylab = 'y', type = 'p', col = 'white')
+  # Sketches an empty graph.
   
-  newlist <- list('ll' = ll, 'ul' = ul, 'x' = m$x)
-  invisible(newlist)
+  lines(ll ~ m$x, col = 'blue', lwd = 3) # Sketches a line of lower confidence 
+  # limit.
+  lines(ul ~ m$x, col = 'blue', lwd = 3) # Sketches a line of upper confidence 
+  # limit.
+  polygon(c(m$x, rev(m$x)), c(ll, rev(ul)), col = 'grey', border = NA)
+  # Sketches a shaded area representing the 95% credible intervals.
+  lines(m$Fitted ~ m$x, col = 'red', lwd = 3) # Sketches the smoothing line.
+  points(m$y ~ m$x) # Sketches the data points.
+  legend('bottomright', legend = c('Smoothing Curve', '95% Credible Interval Bounds'), lwd = 3, col = c('red', 'blue'), cex = .7) # Introduces the legends.
+  
+  ## The Second Plot
+  plot((m$y - m$Fitted_Values) ~ m$Fitted_Values, xlab = 'Fitted Values', ylab = 'Residuals', main = 'Residual vs. Fitted Values')
+  
+  ## The Third Plot
+  qqnorm(m$y - m$Fitted_Values) 
+  qqline(m$y - m$Fitted_Values)
+  
+  newlist <- list('ll' = ll, 'ul' = ul, 'x' = m$x) # Stores the lower limits,
+  # the upper limits, as well as the corresponding x values to the new list.
+  invisible(newlist) # Silently returns the new list.
 
 }
 ```
@@ -187,11 +200,30 @@ m <- pspline(x, y, k = 20, logsp = c(-5, 5), bord = 3, pord = 2, ngrid = 100)
 
 ## Print EDF, k, residual std, r ^ 2, and GCV of the model.
 print.pspline(m)
-
+## Order 3 p-spline with order 2 penalty 
+## Effective degrees of freedom: 11.22137 Coefficients: 20 
+## residual std dev: 22.67567 r-squared: 0.7797937 GCV: 4.222302
 ## Make predictions.
-new_x<- sample(x, 10)
+new_x<- 1 : 10
 predict.pspline(m, new_x)
-
+## $fit
+##              [,1]
+##  [1,]  0.07309776
+##  [2,] -0.78716075
+##  [3,] -1.65735217
+##  [4,] -2.39155400
+##  [5,] -2.85892111
+##  [6,] -2.92953835
+##  [7,] -2.50186050
+##  [8,] -1.51607770
+##  [9,]  0.08397340
+## [10,]  2.00730763
+## 
+## $se
+##  [1] 20.861461 14.451908 10.109967  8.449088  8.447217  8.404898  7.709292
+##  [8]  7.148912  6.922900  6.670052
 ## Sketch the diagnostic plots.
 plot.pspline(m)
+
 ```
+
