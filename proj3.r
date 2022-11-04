@@ -180,7 +180,7 @@ plot.pspline <- function(m){
   # Sketches a grey-shaded area representing the 95% credible intervals.
   lines(m$Fitted ~ m$x, col = 'red', lwd = 3) # Sketches the smoothing line.
   points(m$y ~ m$x) # Sketches the data points.
-  legend('bottomright', legend = c('Smoothing Curve', '95% Credible Interval Bounds'), lwd = 3, col = c('red', 'blue'), cex = .8) # Introduces the legends.
+  legend('bottomright', legend = c('Smoothing Curve', '95% Credible Interval Bounds'), lwd = 3, col = c('red', 'blue'), cex = .7) # Introduces the legends.
   
   ## The Second Plot
   
