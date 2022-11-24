@@ -10,6 +10,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-
+predict_death <- function(Ni, mi, dj){
+  
+  ## This function takes vectors of starting populations by one year age class,  
+  ## instantaneous per capita death rates per year, and number of deaths in the 
+  ## j-th week as inputs. Notice that the number of deaths is not sex specific.
+  ## It iterates the model forward for length(d) weeks, and returns the 
+  ## predicted number of deaths each week as a vector.
+  
+  
+}
 ```
 
