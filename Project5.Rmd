@@ -10,15 +10,108 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-predict_death <- function(Ni, mi, dj){
+predict_death <- function(Nf, Nm, mf, mm, d){
   
-  ## This function takes vectors of starting populations by one year age class,  
-  ## instantaneous per capita death rates per year, and number of deaths in the 
-  ## j-th week as inputs. Notice that the number of deaths is not sex specific.
-  ## It iterates the model forward for length(d) weeks, and returns the 
-  ## predicted number of deaths each week as a vector.
+  ## This function takes vectors of starting populations by one year age class(N
+  ## ), instantaneous per capita death rates per year(m), and number of deaths 
+  ## in the j-th week(d) as inputs. Notice that the starting populations and the 
+  ## death rates are separated into 2 groups, which are male and female, while 
+  ## the number of deaths is not sex specific. It iterates the model forward for
+  ## length(d) weeks, and returns the predicted number of deaths each week as a 
+  ## vector.  
   
+  # Makes copies of the starting populations of the male and female groups. 
+  Nf_copy <- Nf
+  Nm_copy <- Nm
   
+  # Expected proportions of age groups dying in a week.
+  qf <- 1 - exp(-mf / 52)
+  qm <- 1 - exp(-mm / 52)
+  
+  # Initialises the vectors specifying deaths per week for male and female groups.
+  Death_week_f <- rep(0, length(d))
+  Death_week_m <- rep(0, length(d))
+  
+  for(j in 1 : length(d)){# Loops through all of the elements of d.
+    
+    # Obtains the predicted deaths of different age classes for male and female 
+    # groups.
+    Df <- .9885 * d[j] * (qf * Nf)
+    Dm <- .9885 * d[j] * (qm * Nm)
+    
+    # Obtains the total predicted deaths for male and female groups.
+    pred_deaths_f <- sum(Df)
+    pred_deaths_m <- sum(Dm)
+    
+    # Stores the values above into the vectors that specify deaths per week.
+    Death_week_f[j] <- pred_deaths_f
+    Death_week_m[j] <- pred_deaths_m
+    
+    # Removes deaths from the starting populations.
+    N_star_f <- Nf - Df
+    N_star_m <- Nm - Dm
+    
+    # Obtains the previous N_stars, where the first element is the starting 
+    # population of age class of 1 year.
+    N_star_previous_f <- c(Nf_copy[1], N_star_f[1 : (length(Nf) - 1)])
+    N_star_previous_m <- c(Nm_copy[1], N_star_m[1 : (length(Nm) - 1)])
+    
+    # Obtains the populations of the same age class at the start of the next week.
+    N_plus_f <- N_star_f * 51 / 52 + N_star_previous_f / 52
+    N_plus_m <- N_star_m * 51 / 52 + N_star_previous_m / 52
+    
+    # Updates the starting populations.
+    Nf <- N_plus_f
+    Nm <- N_plus_m
+  }
+  
+  # Returns the summation of the vectors specifying deaths per week of male and 
+  # female groups.
+  return(Death_week_f + Death_week_m)
 }
 ```
+
+```{r}
+# Reads the two data-sets.
+it1720uk <- read.table('lt1720uk.dat', header = T)
+death1722uk <- read.table('death1722uk.dat', header = T)
+
+# Specifies the inputs of the deaths prediction function.
+fpop20 <- as.numeric(it1720uk$fpop20)
+mf <- as.numeric(it1720uk$mf)
+mpop20 <- as.numeric(it1720uk$mpop20)
+mm <- as.numeric(it1720uk$mm)
+death_num_overall <- as.numeric(death1722uk$d)[157 : 305]
+
+predicted_deaths_overall <- predict_death(fpop20, mpop20, mf, mm, death_num_overall)
+
+real_deaths_overall <- death1722uk$deaths[157 : 305]
+excess_deaths_overall <- real_deaths_overall - predicted_deaths_overall
+```
+
+```{r}
+
+death_num_2020 <- as.numeric(death1722uk$d)[(157 : 208)]
+
+predicted_deaths_2020 <- predict_death(fpop20, mpop20, mf, mm, death_num_2020)
+
+real_deaths_2020 <- death1722uk$deaths[(157 : 208)]
+excess_deaths_2020 <- real_deaths_2020 - predicted_deaths_2020
+```
+
+```{r}
+weeks <- 1 : length(excess_deaths_overall)
+plot(predicted_deaths_overall ~ weeks, type = 'l', xlab = 'Weeks', ylab = 'Deaths', main = paste('Number of Excess Deaths in 2020 is', round(sum(excess_deaths_2020), 0), ', and Overall is', round(sum(excess_deaths_overall), 0)), col = 'red', lwd = 3, ylim = c(0, 2.5e4))
+points(real_deaths_overall ~ weeks, pch = 20)
+legend('topright', legend = c('Predicted Deaths', 'Exact Deaths'), col = c('red', 'black'), pch = c(0, 20))
+```
+```{r}
+cum_excess_deaths_overall <- cumsum(excess_deaths_overall)
+weeks <- 1 : length(excess_deaths_overall)
+plot(cum_excess_deaths_overall ~ weeks, type = 'p', xlab = 'Weeks', ylab = 'Cumulative Excess Deaths', main = 'Overall Cumulative Excess Deaths', col = 'black', lwd = 3)
+```
+```{r}
+
+```
+
 
