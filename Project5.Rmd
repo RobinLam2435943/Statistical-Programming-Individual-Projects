@@ -129,20 +129,44 @@ cum_excess_deaths_overall <- cumsum(excess_deaths_overall)
 plot(cum_excess_deaths_overall ~ weeks, type = 'p', xlab = 'Weeks', ylab = 'Cumulative Excess Deaths', main = 'Overall Cumulative Excess Deaths', col = 'black', lwd = 3)
 ```
 ```{r}
-library(rjags)
+library(rjags) # Loads rjags.
 
 # In the weeks near Christmas and the New Year, the data have recording problems.
 # Hence, they should be set as NA.
-excess_deaths_overall[c(51, 52, 53, 105, 106)] <- NA
+excess_deaths_overall_copy <- excess_deaths_overall # Makes a copy.
+excess_deaths_overall_copy[c(51, 52, 53, 105, 106)] <- NA
 
 # The JAGS model.
-mod <- jags.model('model.jags', data = list(x = excess_deaths_overall, N = length(excess_deaths_overall)))
+mod <- jags.model('model.jags', data = list(x = excess_deaths_overall_copy, N = length(excess_deaths_overall)))
+
+# Draws 10000 samples from the posterior densities of mu, rho, and k.
+samples <- coda.samples(mod, c('mu', 'rho', 'k'), n.iter = 1e4)
 
 # MCMC of the posterior of rho.
-rho <- coda.samples(mod, 'rho', n.iter = 1e4)
+rho <- samples[, (3 + length(excess_deaths_overall))]
 
 # Trace plot and histogram of rho.
 plot(rho)
 hist(as.numeric(rho[[1]]), xlab = 'rho', main = 'Histogram of Rho')
+
+# Posterior expected value vector for mu.
+sample_matrix <- as.matrix(samples[[1]], nrow = 1e4)
+mu_mean <- apply(sample_matrix[, (2 : (2 + length(excess_deaths_overall)))], 2, mean)
+
+# Extracts every 50th sampled mu vector.
+mu_50 <- sample_matrix[seq(50, 1e4, by = 50), (2 : (2 + length(excess_deaths_overall)))]
+
+matplot((1 : dim(mu_50)[2]), t(mu_50), type = "l", col = 'grey', xlab = 'Weeks', ylab = 'Excess Deaths', main = 'Excess Deaths against Weeks')
+matlines((1 : dim(mu_50)[2]), mu_mean, type = "l", col = 'blue')
+matpoints((1 : length(excess_deaths_overall)), excess_deaths_overall, pch = 1, col = 'black')
+matpoints(c(51, 52, 53, 105, 106), excess_deaths_overall[c(51, 52, 53, 105, 106)], pch = 1, col = 'red')
+
+# Shows the legends.
+legend('topright', legend = c('Sampled mu', 'Expected mu', 'Excess Deaths', 'Unused Excess Deaths'), col = c('grey', 'blue', 'black', 'red'), pch = c(0, 0, 1, 1))
+
+# Residuals against time plot.
+residuals <- excess_deaths_overall_copy - mu_mean[1 : (length(mu_mean) - 1)]
+plot(residuals ~ weeks, xlab = 'Weeks', ylab = 'Residuals', main = 'Residuals against Time')
+abline(lm(residuals ~ weeks), col = 'red', lwd = 3)
 ```
 
