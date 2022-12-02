@@ -1,15 +1,3 @@
----
-title: "Project 5"
-author: "Robin"
-date: "`r Sys.Date()`"
-output: word_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
 ## The author of this project is Sihong Lin, which can also be referred to as 
 ## Robin Lin.
 
@@ -31,15 +19,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ## to allow for seasonal variation in mortality rates. The excess deaths are to
 ## be computed by comparing the predicted number of deaths with the actual number 
 ## of deaths, and they are to be modelled by using a Bayesian model in JAGS.
-```
-
-```{r}
 # pdf('excess.pdf', height = 10, width = 6)
 # par(mfrow = c(2, 1))
-```
-
-
-```{r}
+## Set working directory to be the folder containing this file.
 predict_death <- function(Nf, Nm, mf, mm, d){
   
   ## This function takes vectors of starting populations by one year age class(N
@@ -134,13 +116,13 @@ excess_deaths_2020 <- real_deaths_2020 - predicted_deaths_2020
 weeks <- 1 : length(excess_deaths_overall) # Specifies overall weeks.
 
 # Overall plot of predicted deaths.
-plot(predicted_deaths_overall ~ weeks, type = 'l', xlab = 'Weeks', ylab = 'Deaths', main = paste('Number of Excess Deaths in 2020 is', round(sum(excess_deaths_2020), 0), ', and Overall is', round(sum(excess_deaths_overall), 0)), col = 'red', lwd = 3, ylim = c(0, 2.5e4)) 
+plot(predicted_deaths_overall ~ weeks, type = 'l', xlab = 'Weeks', ylab = 'Deaths', main = paste('Number of Excess Deaths in 2020 is', round(sum(excess_deaths_2020), 0), '\n', 'Overall is', round(sum(excess_deaths_overall), 0)), col = 'red', lwd = 3, ylim = c(0, 2.5e4)) 
 
 # Overall plot of real deaths.
 points(real_deaths_overall ~ weeks, pch = 20)
 
 # Shows the legends.
-legend('topright', legend = c('Predicted Deaths', 'Exact Deaths'), col = c('red', 'black'), pch = c(0, 20))
+legend('topright', legend = c('Predicted Deaths', 'Exact Deaths'), col = c('red', 'black'), pch = c(0, 20), cex = .7)
 
 # Overall cumulative excess deaths.
 cum_excess_deaths_overall <- cumsum(excess_deaths_overall)
@@ -149,6 +131,12 @@ cum_excess_deaths_overall <- cumsum(excess_deaths_overall)
 plot(cum_excess_deaths_overall ~ weeks, type = 'p', xlab = 'Weeks', ylab = 'Cumulative Excess Deaths', main = 'Overall Cumulative Excess Deaths', col = 'black', lwd = 3)
 
 library(rjags) # Loads rjags.
+## Warning: package 'rjags' was built under R version 4.1.3
+## Loading required package: coda
+## Warning: package 'coda' was built under R version 4.1.3
+## Linked to JAGS 4.3.0
+## Loaded modules: basemod,bugs
+
 ## Warning: package 'rjags' was built under R version 4.1.3
 ## Loading required package: coda
 ## Warning: package 'coda' was built under R version 4.1.3
@@ -171,6 +159,15 @@ mod <- jags.model('model.jags', data = list(x = excess_deaths_overall_copy, N = 
 ##    Total graph size: 607
 ## 
 ## Initializing model
+## Compiling model graph
+##    Resolving undeclared variables
+##    Allocating nodes
+## Graph information:
+##    Observed stochastic nodes: 144
+##    Unobserved stochastic nodes: 9
+##    Total graph size: 607
+## 
+## Initializing model
 
 # Draws 10000 samples from the posterior densities of mu, rho, and k.
 samples <- coda.samples(mod, c('mu', 'rho', 'k'), n.iter = 1e4)
@@ -180,6 +177,7 @@ rho <- samples[, (3 + length(excess_deaths_overall))]
 
 # Trace plot and histogram of rho.
 plot(rho)
+
 hist(as.numeric(rho[[1]]), xlab = 'rho', main = 'Histogram of Rho')
 
 # Posterior expected value vector for mu.
@@ -200,16 +198,11 @@ matpoints((1 : length(excess_deaths_overall)), excess_deaths_overall, pch = 1, c
 # Plots the unused excess deaths.
 matpoints(c(51, 52, 53, 105, 106), excess_deaths_overall[c(51, 52, 53, 105, 106)], pch = 1, col = 'red')
 # Shows the legends.
-legend('topright', legend = c('Sampled mu', 'Expected mu', 'Excess Deaths', 'Unused Excess Deaths'), col = c('grey', 'blue', 'black', 'red'), pch = c(0, 0, 1, 1))
+legend('topright', legend = c('Sampled mu', 'Expected mu', 'Excess Deaths', 'Unused Excess Deaths'), col = c('grey', 'blue', 'black', 'red'), pch = c(0, 0, 1, 1), cex = .7)
 
 # Residuals against time plot.
 residuals <- excess_deaths_overall_copy - mu_mean[1 : (length(mu_mean) - 1)]
 plot(residuals ~ weeks, xlab = 'Weeks', ylab = 'Residuals', main = 'Residuals against Time')
 abline(lm(residuals ~ weeks), col = 'red', lwd = 3) # Adds a trend line.
-```
 
-```{r}
 # dev.off()
-```
-
-
