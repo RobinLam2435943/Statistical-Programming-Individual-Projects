@@ -111,7 +111,13 @@ weeks <- 1 : length(excess_deaths_overall)
 plot(cum_excess_deaths_overall ~ weeks, type = 'p', xlab = 'Weeks', ylab = 'Cumulative Excess Deaths', main = 'Overall Cumulative Excess Deaths', col = 'black', lwd = 3)
 ```
 ```{r}
+library(rjags)
+excess_deaths_overall[c(51, 52, 53, 105, 106)] <- NA
+mod <- jags.model('model.jags', data = list(x = excess_deaths_overall, N = length(excess_deaths_overall)))
 
+rho <- coda.samples(mod, 'rho', n.iter = 1e4)
+
+plot(rho)
+hist(as.numeric(rho[[1]]))
 ```
-
 

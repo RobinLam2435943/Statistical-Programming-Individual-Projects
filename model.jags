@@ -1,0 +1,13 @@
+model{
+
+  for(i in 1 : N){ # Loops over the data
+    mu[i + 1] <- (x[i] - alpha) * rho + alpha # Iterative formula of mu
+    x[i] ~ dt(mu[i], tau, k) # X ~ t(mu, tau, k)
+  }	
+  
+  mu[1] <- alpha # Initial value of mu
+  alpha ~ dnorm(0, 1E-4) # Alpha ~ N(0, 1 / sig2 = .0001)
+  k ~ dunif(2, 100) # k ~ U(2, 100)
+  rho ~ dunif(0, .9) # rho ~ U(0, .9)
+  tau ~ dexp(1) # tau ~ exp(1)
+}
