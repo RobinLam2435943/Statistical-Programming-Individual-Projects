@@ -10,6 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+# pdf('excess.pdf', height = 10, width = 6)
+# par(mfrow = c(2, 1))
+```
+
+```{r}
 predict_death <- function(Nf, Nm, mf, mm, d){
   
   ## This function takes vectors of starting populations by one year age class(N
@@ -168,5 +173,8 @@ legend('topright', legend = c('Sampled mu', 'Expected mu', 'Excess Deaths', 'Unu
 residuals <- excess_deaths_overall_copy - mu_mean[1 : (length(mu_mean) - 1)]
 plot(residuals ~ weeks, xlab = 'Weeks', ylab = 'Residuals', main = 'Residuals against Time')
 abline(lm(residuals ~ weeks), col = 'red', lwd = 3)
+```
+```{r}
+# dev.off()
 ```
 
