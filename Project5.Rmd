@@ -76,48 +76,73 @@ predict_death <- function(Nf, Nm, mf, mm, d){
 it1720uk <- read.table('lt1720uk.dat', header = T)
 death1722uk <- read.table('death1722uk.dat', header = T)
 
-# Specifies the inputs of the deaths prediction function.
-fpop20 <- as.numeric(it1720uk$fpop20)
-mf <- as.numeric(it1720uk$mf)
-mpop20 <- as.numeric(it1720uk$mpop20)
-mm <- as.numeric(it1720uk$mm)
-death_num_overall <- as.numeric(death1722uk$d)[157 : 305]
+# Specifies the inputs of the deaths prediction function. 
+fpop20 <- as.numeric(it1720uk$fpop20) # Starting population of the female group.
+mf <- as.numeric(it1720uk$mf) # Mortality rates of the female group.
+mpop20 <- as.numeric(it1720uk$mpop20) # Starting population of the male group.
+mm <- as.numeric(it1720uk$mm) # Mortality rates of the male group.
 
+# The overall mortality rate modifiers.
+death_num_overall <- as.numeric(death1722uk$d)[157 : length(death1722uk$d)]
+
+# The overall predicted deaths numbers.
 predicted_deaths_overall <- predict_death(fpop20, mpop20, mf, mm, death_num_overall)
 
-real_deaths_overall <- death1722uk$deaths[157 : 305]
+# The overall real deaths numbers.
+real_deaths_overall <- death1722uk$deaths[157 : length(death1722uk$d)]
+
+# The overall excess deaths numbers.
 excess_deaths_overall <- real_deaths_overall - predicted_deaths_overall
 ```
 
 ```{r}
-
+# The mortality rate modifiers in 2020.
 death_num_2020 <- as.numeric(death1722uk$d)[(157 : 208)]
 
+# The predicted deaths numbers in 2020.
 predicted_deaths_2020 <- predict_death(fpop20, mpop20, mf, mm, death_num_2020)
 
+# The real deaths numbers in 2020.
 real_deaths_2020 <- death1722uk$deaths[(157 : 208)]
+
+# The excess deaths numbers in 2020.
 excess_deaths_2020 <- real_deaths_2020 - predicted_deaths_2020
 ```
 
 ```{r}
-weeks <- 1 : length(excess_deaths_overall)
-plot(predicted_deaths_overall ~ weeks, type = 'l', xlab = 'Weeks', ylab = 'Deaths', main = paste('Number of Excess Deaths in 2020 is', round(sum(excess_deaths_2020), 0), ', and Overall is', round(sum(excess_deaths_overall), 0)), col = 'red', lwd = 3, ylim = c(0, 2.5e4))
+weeks <- 1 : length(excess_deaths_overall) # Specifies overall weeks.
+
+# Overall plot of predicted deaths.
+plot(predicted_deaths_overall ~ weeks, type = 'l', xlab = 'Weeks', ylab = 'Deaths', main = paste('Number of Excess Deaths in 2020 is', round(sum(excess_deaths_2020), 0), ', and Overall is', round(sum(excess_deaths_overall), 0)), col = 'red', lwd = 3, ylim = c(0, 2.5e4)) 
+
+# Overall plot of real deaths.
 points(real_deaths_overall ~ weeks, pch = 20)
+
+# Shows the legends.
 legend('topright', legend = c('Predicted Deaths', 'Exact Deaths'), col = c('red', 'black'), pch = c(0, 20))
 ```
 ```{r}
+# Overall cumulative excess deaths.
 cum_excess_deaths_overall <- cumsum(excess_deaths_overall)
-weeks <- 1 : length(excess_deaths_overall)
+
+# Plot of overall cumulative excess deaths.
 plot(cum_excess_deaths_overall ~ weeks, type = 'p', xlab = 'Weeks', ylab = 'Cumulative Excess Deaths', main = 'Overall Cumulative Excess Deaths', col = 'black', lwd = 3)
 ```
 ```{r}
 library(rjags)
+
+# In the weeks near Christmas and the New Year, the data have recording problems.
+# Hence, they should be set as NA.
 excess_deaths_overall[c(51, 52, 53, 105, 106)] <- NA
+
+# The JAGS model.
 mod <- jags.model('model.jags', data = list(x = excess_deaths_overall, N = length(excess_deaths_overall)))
 
+# MCMC of the posterior of rho.
 rho <- coda.samples(mod, 'rho', n.iter = 1e4)
 
+# Trace plot and histogram of rho.
 plot(rho)
-hist(as.numeric(rho[[1]]))
+hist(as.numeric(rho[[1]]), xlab = 'rho', main = 'Histogram of Rho')
 ```
 
